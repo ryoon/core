@@ -40,6 +40,8 @@ use OC\AppFramework\Middleware\Security\CORSMiddleware;
 use OC\AppFramework\Middleware\Security\SecurityMiddleware;
 use OC\AppFramework\Middleware\SessionMiddleware;
 use OC\AppFramework\Utility\SimpleContainer;
+use OC\Authentication\AccountModule\Manager as AccountModuleManager;
+use OC\Core\Middleware\AccountModuleMiddleware;
 use OC\Core\Middleware\TwoFactorMiddleware;
 use OCP\AppFramework\IApi;
 use OCP\AppFramework\IAppContainer;
@@ -381,12 +383,30 @@ class DIContainer extends SimpleContainer implements IAppContainer {
 			return new TwoFactorMiddleware($twoFactorManager, $userSession, $urlGenerator, $reflector, $request);
 		});
 
+		$this->registerService('AccountModuleManager', function ($c) use ($app) {
+			return new AccountModuleManager(
+				$this->getServer()->getConfig(),
+				$this->getServer()->getLogger(),
+				$this->getServer()->getAppManager()
+			);
+		});
+
+		$this->registerService('AccountMiddleware', function (SimpleContainer $c) use ($app) {
+			return new AccountModuleMiddleware(
+				$this->getServer()->getLogger(),
+				$c['AccountModuleManager'],
+				$app->getServer()->getUserSession(),
+				$c['ControllerMethodReflector']
+			);
+		});
+
 		$middleWares = &$this->middleWares;
 		$this->registerService('MiddlewareDispatcher', function ($c) use (&$middleWares) {
 			$dispatcher = new MiddlewareDispatcher();
 			$dispatcher->registerMiddleware($c['CORSMiddleware']);
 			$dispatcher->registerMiddleware($c['SecurityMiddleware']);
-			$dispatcher->registerMiddleWare($c['TwoFactorMiddleware']);
+			$dispatcher->registerMiddleware($c['TwoFactorMiddleware']);
+			$dispatcher->registerMiddleware($c['AccountMiddleware']);
 
 			foreach ($middleWares as $middleWare) {
 				$dispatcher->registerMiddleware($c[$middleWare]);

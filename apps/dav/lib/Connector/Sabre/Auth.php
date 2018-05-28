@@ -31,8 +31,10 @@ namespace OCA\DAV\Connector\Sabre;
 
 use Exception;
 use OC\AppFramework\Http\Request;
+use OC\Authentication\Exceptions\AccountCheckException;
 use OC\Authentication\Exceptions\PasswordLoginForbiddenException;
 use OC\Authentication\TwoFactorAuth\Manager;
+use OC\Authentication\AccountModule\Manager as AccountModuleManager;
 use OC\User\LoginException;
 use OC\User\Session;
 use OCA\DAV\Connector\Sabre\Exception\PasswordLoginForbidden;
@@ -57,22 +59,27 @@ class Auth extends AbstractBasic {
 	private $currentUser;
 	/** @var Manager */
 	private $twoFactorManager;
+	/** @var AccountModuleManager */
+	private $accountModuleManager;
 
 	/**
 	 * @param ISession $session
 	 * @param Session $userSession
 	 * @param IRequest $request
 	 * @param Manager $twoFactorManager
+	 * @param AccountModuleManager $accountModuleManager
 	 * @param string $principalPrefix
 	 */
 	public function __construct(ISession $session,
 								Session $userSession,
 								IRequest $request,
 								Manager $twoFactorManager,
+								AccountModuleManager $accountModuleManager,
 								$principalPrefix = 'principals/users/') {
 		$this->session = $session;
 		$this->userSession = $userSession;
 		$this->twoFactorManager = $twoFactorManager;
+		$this->accountModuleManager = $accountModuleManager;
 		$this->request = $request;
 		$this->principalPrefix = $principalPrefix;
 
@@ -219,11 +226,20 @@ class Auth extends AbstractBasic {
 				//Well behaved clients that only send the cookie are allowed
 				($this->userSession->isLoggedIn() && $this->session->get(self::DAV_AUTHENTICATED) === $this->userSession->getUser()->getUID() && $request->getHeader('Authorization') === null)
 			) {
-				$user = $this->userSession->getUser()->getUID();
-				\OC_Util::setupFS($user);
-				$this->currentUser = $user;
+				$user = $this->userSession->getUser();
+				if ($user === null) {
+					throw new \UnexpectedValueException('No user in session');
+				}
+				try {
+					$this->accountModuleManager->check($user);
+				} catch (AccountCheckException $ex) {
+					throw new \Sabre\DAV\Exception\NotAuthenticated($ex->getMessage(), $ex->getCode(), $ex);
+				}
+				$uid = $user->getUID();
+				\OC_Util::setupFS($uid);
+				$this->currentUser = $uid;
 				$this->session->close();
-				return [true, $this->principalPrefix . $user];
+				return [true, $this->principalPrefix . $uid];
 			}
 		}
 
@@ -236,9 +252,17 @@ class Auth extends AbstractBasic {
 
 		$data = parent::check($request, $response);
 		if ($data[0] === true) {
+			$user = $this->userSession->getUser();
+			if ($user === null) {
+				throw new \UnexpectedValueException('No user in session');
+			}
+			try {
+				$this->accountModuleManager->check($user);
+			} catch (AccountCheckException $ex) {
+				throw new \Sabre\DAV\Exception\NotAuthenticated($ex->getMessage(), $ex->getCode(), $ex);
+			}
 			$startPos = \strrpos($data[1], '/') + 1;
-			$user = $this->userSession->getUser()->getUID();
-			$data[1] = \substr_replace($data[1], $user, $startPos);
+			$data[1] = \substr_replace($data[1], $user->getUID(), $startPos);
 		}
 		return $data;
 	}

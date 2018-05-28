@@ -297,6 +297,7 @@ OC.FileUpload.prototype = {
 			headers['OC-Total-Length'] = size;
 
 		}
+		headers['OC-LazyOps'] = true;
 
 		return this.uploader.davClient.move(
 			'uploads/' + uid + '/' + this.getId() + '/.file',
