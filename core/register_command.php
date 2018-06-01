@@ -149,7 +149,7 @@ if (\OC::$server->getConfig()->getSystemValue('installed', false)) {
 	$application->add(new OC\Core\Command\User\Setting(\OC::$server->getUserManager(), \OC::$server->getConfig(), \OC::$server->getDatabaseConnection()));
 	$application->add(new OC\Core\Command\User\Modify(\OC::$server->getUserManager(), \OC::$server->getMailer()));
 	$application->add(new OC\Core\Command\User\SyncBackend(\OC::$server->getAccountMapper(), \OC::$server->getConfig(), \OC::$server->getUserManager(), \OC::$server->getLogger()));
-	$application->add(new \OC\Core\Command\User\Inactive(\OC::$server->getUserManager()));
+	$application->add(new OC\Core\Command\User\Inactive(\OC::$server->getUserManager()));
 
 	$application->add(new OC\Core\Command\Group\Add(\OC::$server->getGroupManager()));
 	$application->add(new OC\Core\Command\Group\Delete(\OC::$server->getGroupManager()));
@@ -162,6 +162,7 @@ if (\OC::$server->getConfig()->getSystemValue('installed', false)) {
 	$application->add(new OC\Core\Command\Security\ImportCertificate(\OC::$server->getCertificateManager(null)));
 	$application->add(new OC\Core\Command\Security\RemoveCertificate(\OC::$server->getCertificateManager(null)));
 	$application->add(new OC\Core\Command\Security\ListRoutes(\OC::$server->getRouter()));
+	$application->add(new OC\Core\Command\Background\Queue\Execute(\OC::$server->getJobList()));
 } else {
 	$application->add(new OC\Core\Command\Maintenance\Install(\OC::$server->getConfig()));
 }
