@@ -113,6 +113,15 @@ pipeline:
       matrix:
         TEST_OBJECTSTORAGE: true
 
+  phpstan:
+    image: owncloudci/php:${PHP_VERSION}
+    pull: true
+    commands:
+      - make test-php-phpstan
+    when:
+      matrix:
+        TEST_SUITE: phpstan
+
   phpunit:
     image: owncloudci/php:${PHP_VERSION}
     pull: true
@@ -408,6 +417,11 @@ matrix:
   # php-cs-fixer
     - TEST_SUITE: php-cs-fixer
       PHP_VERSION: 7.2
+
+  # phpstan
+    - TEST_SUITE: phpstan
+      PHP_VERSION: 7.1
+      INSTALL_SERVER: true
 
   # Litmus
     - PHP_VERSION: 7.1
