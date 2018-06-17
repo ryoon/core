@@ -39,6 +39,7 @@ KARMA=$(NODE_PREFIX)/node_modules/.bin/karma
 JSDOC=$(NODE_PREFIX)/node_modules/.bin/jsdoc
 PHPUNIT="$(shell pwd)/lib/composer/phpunit/phpunit/phpunit"
 COMPOSER_BIN=build/composer.phar
+PHPSTAN_BIN=build/phpstan.phar
 
 TEST_DATABASE=sqlite
 TEST_EXTERNAL_ENV=smb-silvershell
@@ -108,6 +109,8 @@ help:
 $(COMPOSER_BIN):
 	cd build && ./getcomposer.sh
 
+$(PHPSTAN_BIN):
+	cd build && curl -s -L https://github.com/phpstan/phpstan/releases/download/0.9.2/phpstan.phar -o phpstan.phar;
 #
 # ownCloud core PHP dependencies
 #
@@ -189,6 +192,11 @@ test-php-lint: $(composer_dev_deps)
 .PHONY: test-php-style
 test-php-style: $(composer_dev_deps)
 	$(composer_deps)/bin/php-cs-fixer fix -v --diff --diff-format udiff --dry-run --allow-risky yes
+
+.PHONY: test-php-phpstan
+test-php-phpstan: $(PHPSTAN_BIN)
+	php $(PHPSTAN_BIN) analyse --memory-limit=2G --configuration=./phpstan.neon --level=0 apps core settings lib/private lib/public ocs ocs-provider
+
 
 .PHONY: test
 test: test-php-lint test-php-style test-php test-js test-acceptance
