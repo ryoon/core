@@ -257,8 +257,21 @@ class MailNotifications {
 
 			return $this->mailer->send($message);
 		} catch (\Exception $e) {
-			$this->logger->error("Can't send mail with public link to $recipient: ".$e->getMessage(), ['app' => 'sharing']);
-			return [$recipient];
+			$allRecipients = '';
+			$comma = '';
+			if ($recipient !== null && $recipient !== '') {
+				$allRecipients = $recipient;
+				$comma = ',';
+			}
+			if (isset($options['cc']) && $options['cc'] !== '') {
+				$allRecipients .= $comma . $options['cc'];
+				$comma = ',';
+			}
+			if (isset($options['bcc']) && $options['bcc'] !== '') {
+				$allRecipients .= $comma . $options['bcc'];
+			}
+			$this->logger->error("Can't send mail with public link to $allRecipients: ".$e->getMessage(), ['app' => 'sharing']);
+			return [$allRecipients];
 		}
 	}
 
